@@ -24,6 +24,7 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -36,6 +37,9 @@ class NotificationApplicationServiceTest {
 
     @Mock
     private SpringDataOrderRecipientRepository orderRecipientRepository;
+
+    @Mock
+    private NotificationStreamService notificationStreamService;
 
     @InjectMocks
     private NotificationApplicationService notificationApplicationService;
@@ -59,6 +63,7 @@ class NotificationApplicationServiceTest {
 
         when(notificationRepository.existsBySourceEventId(eventId)).thenReturn(false);
         when(orderRecipientRepository.findByOrderId(orderId)).thenReturn(Optional.empty());
+        when(notificationRepository.save(any(NotificationJpaEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         notificationApplicationService.handlePaymentEvent(event);
 
@@ -72,6 +77,7 @@ class NotificationApplicationServiceTest {
         assertThat(saved.getSourceEventId()).isEqualTo(eventId);
         assertThat(saved.getEventType()).isEqualTo(PaymentEventTypes.PAYMENT_CONFIRMED);
         assertThat(saved.getTitle()).isEqualTo("Payment confirmed");
+        verify(notificationStreamService).publish(eq(customerId), any(NotificationStreamPayload.class));
     }
 
     @Test
@@ -95,6 +101,7 @@ class NotificationApplicationServiceTest {
 
         verify(notificationRepository, never()).save(any());
         verify(orderRecipientRepository, never()).save(any());
+        verify(notificationStreamService, never()).publish(any(), any());
     }
 
     @Test
@@ -115,6 +122,7 @@ class NotificationApplicationServiceTest {
 
         when(notificationRepository.existsBySourceEventId(eventId)).thenReturn(false);
         when(orderRecipientRepository.findByOrderId(orderId)).thenReturn(Optional.of(mapping));
+        when(notificationRepository.save(any(NotificationJpaEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         notificationApplicationService.handleDeliveryEvent(event);
 
@@ -122,6 +130,7 @@ class NotificationApplicationServiceTest {
         verify(notificationRepository).save(captor.capture());
         assertThat(captor.getValue().getRecipientUserId()).isEqualTo(customerId);
         assertThat(captor.getValue().getTitle()).isEqualTo("Delivered");
+        verify(notificationStreamService).publish(eq(customerId), any(NotificationStreamPayload.class));
     }
 
     @Test
@@ -140,6 +149,7 @@ class NotificationApplicationServiceTest {
         notificationApplicationService.handleDeliveryEvent(event);
 
         verify(notificationRepository, never()).save(any());
+        verify(notificationStreamService, never()).publish(any(), any());
     }
 
     @Test
@@ -160,11 +170,13 @@ class NotificationApplicationServiceTest {
 
         when(notificationRepository.existsBySourceEventId(eventId)).thenReturn(false);
         when(orderRecipientRepository.findByOrderId(orderId)).thenReturn(Optional.of(mapping));
+        when(notificationRepository.save(any(NotificationJpaEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         notificationApplicationService.handleOrderEvent(event);
 
         ArgumentCaptor<NotificationJpaEntity> captor = ArgumentCaptor.forClass(NotificationJpaEntity.class);
         verify(notificationRepository).save(captor.capture());
         assertThat(captor.getValue().getEventType()).isEqualTo(OrderEventTypes.ORDER_READY_FOR_DELIVERY);
+        verify(notificationStreamService).publish(eq(customerId), any(NotificationStreamPayload.class));
     }
 }

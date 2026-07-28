@@ -3,7 +3,7 @@ info:
   title: Food Delivery Platform - Notification Service
   description: |
     Notification bounded context — real-time SSE streams and inbox (requirements 5.6.1 / 5.6.2).
-    Phase 1 scaffold: health and contract stubs; endpoints implemented in later phases.
+    SSE stream implemented at `/notifications/stream`; inbox in Phase 5.
   version: 1.0.0
 servers:
   - url: http://localhost:8086
@@ -22,7 +22,7 @@ paths:
   /notifications/stream:
     get:
       tags: [Notifications]
-      summary: Server-sent events stream for live updates (Phase 3)
+      summary: Server-sent events stream for live customer notifications
       operationId: streamNotifications
       parameters:
         - name: X-User-Id
@@ -31,9 +31,14 @@ paths:
           schema:
             type: string
             format: uuid
+        - name: X-User-Roles
+          in: header
+          required: false
+          schema:
+            type: string
       responses:
         '200':
-          description: SSE stream opened
+          description: SSE stream opened (`connected` then `notification` events)
           content:
             text/event-stream:
               schema:
@@ -78,6 +83,27 @@ paths:
 
 components:
   schemas:
+    NotificationStreamPayload:
+      type: object
+      required: [id, eventType, title, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        orderId:
+          type: string
+          format: uuid
+          nullable: true
+        eventType:
+          type: string
+        title:
+          type: string
+        body:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+
     NotificationItem:
       type: object
       required: [id, eventType, title, createdAt]

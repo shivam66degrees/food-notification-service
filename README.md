@@ -8,6 +8,8 @@ Consumes order, payment, and delivery events; pushes updates to clients via SSE 
 
 **Phase 2** — Kafka consumers for `payment.events`, `order.events`, and `delivery.events`; persist notifications and `order_recipients` mapping (from payment events) for downstream delivery/order alerts.
 
+**Phase 3** — SSE stream at `GET /notifications/stream` (5.6.1); gateway header auth; live push when Kafka events are persisted.
+
 ## Software requirements
 
 | Software | Purpose |
@@ -57,6 +59,18 @@ make dev
 | Health | http://localhost:8086/actuator/health |
 | Swagger UI | http://localhost:8086/swagger-ui/index.html |
 | OpenAPI contract | `api-spec/notification-spec.yaml` |
+| SSE stream | `GET /notifications/stream` (requires `X-User-Id` from gateway) |
+
+### SSE stream (local dev)
+
+```bash
+curl -N http://localhost:8086/notifications/stream \
+  -H "Accept: text/event-stream" \
+  -H "X-User-Id: <customer-uuid>" \
+  -H "X-User-Roles: CUSTOMER"
+```
+
+Events: `connected` on subscribe, then `notification` with JSON payload when Kafka events are processed.
 
 ## Makefile commands
 
@@ -90,8 +104,8 @@ Payment events register `order_id → customer_id` in `order_recipients` so late
 | Phase | Scope |
 |-------|--------|
 | 1 | Scaffold |
-| 2 | Kafka consumers + persistence (this phase) |
-| 3 | SSE streams (5.6.1) |
+| 2 | Kafka consumers + persistence |
+| 3 | SSE streams (5.6.1) — this phase |
 | 4 | Gateway routes + platform scripts |
 | 5 | Inbox + alerts (5.6.2) |
 | 6 | Tests + E2E extension |

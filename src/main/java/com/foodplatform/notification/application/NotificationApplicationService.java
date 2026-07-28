@@ -25,13 +25,16 @@ public class NotificationApplicationService {
 
     private final SpringDataNotificationRepository notificationRepository;
     private final SpringDataOrderRecipientRepository orderRecipientRepository;
+    private final NotificationStreamService notificationStreamService;
 
     public NotificationApplicationService(
             SpringDataNotificationRepository notificationRepository,
-            SpringDataOrderRecipientRepository orderRecipientRepository
+            SpringDataOrderRecipientRepository orderRecipientRepository,
+            NotificationStreamService notificationStreamService
     ) {
         this.notificationRepository = notificationRepository;
         this.orderRecipientRepository = orderRecipientRepository;
+        this.notificationStreamService = notificationStreamService;
     }
 
     @Transactional
@@ -62,7 +65,7 @@ public class NotificationApplicationService {
             return;
         }
 
-        persistNotification(
+        NotificationJpaEntity saved = persistNotification(
                 event.eventId(),
                 event.orderId(),
                 event.customerId(),
@@ -70,6 +73,7 @@ public class NotificationApplicationService {
                 copy,
                 event.occurredAt()
         );
+        pushToStream(saved);
         log.info("Recorded notification for payment event type={} orderId={}", event.eventType(), event.orderId());
     }
 
@@ -118,7 +122,8 @@ public class NotificationApplicationService {
             return;
         }
 
-        persistNotification(sourceEventId, orderId, recipientId.get(), eventType, copy, occurredAt);
+        NotificationJpaEntity saved = persistNotification(sourceEventId, orderId, recipientId.get(), eventType, copy, occurredAt);
+        pushToStream(saved);
         log.info("Recorded notification for event type={} orderId={}", eventType, orderId);
     }
 
@@ -137,7 +142,7 @@ public class NotificationApplicationService {
         return orderRecipientRepository.findByOrderId(orderId).map(OrderRecipientJpaEntity::getCustomerId);
     }
 
-    private void persistNotification(
+    private NotificationJpaEntity persistNotification(
             UUID sourceEventId,
             UUID orderId,
             UUID recipientUserId,
@@ -154,6 +159,13 @@ public class NotificationApplicationService {
         entity.setTitle(copy.title());
         entity.setBody(copy.body());
         entity.setCreatedAt(occurredAt != null ? occurredAt : Instant.now());
-        notificationRepository.save(entity);
+        return notificationRepository.save(entity);
+    }
+
+    private void pushToStream(NotificationJpaEntity saved) {
+        notificationStreamService.publish(
+                saved.getRecipientUserId(),
+                NotificationStreamService.fromEntity(saved)
+        );
     }
 }
