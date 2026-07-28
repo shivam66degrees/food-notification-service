@@ -6,6 +6,7 @@ import java.util.UUID;
 
 public record NotificationItemResponse(
         UUID id,
+        UUID orderId,
         String eventType,
         String title,
         String body,

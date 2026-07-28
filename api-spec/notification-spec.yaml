@@ -145,6 +145,10 @@ components:
         id:
           type: string
           format: uuid
+        orderId:
+          type: string
+          format: uuid
+          nullable: true
         eventType:
           type: string
         title:

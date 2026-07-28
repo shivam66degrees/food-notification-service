@@ -14,6 +14,8 @@ Consumes order, payment, and delivery events; pushes updates to clients via SSE 
 
 **Phase 5** — Inbox API (`GET /notifications/inbox`) and mark-read (`PATCH /notifications/{id}/read`) for delivery/status alerts (5.6.2).
 
+**Phase 6** — Platform E2E extended: SSE connected event, inbox alerts for full order flow, mark-read.
+
 ## Software requirements
 
 | Software | Purpose |
@@ -120,7 +122,10 @@ make platform-build      # includes food-notification-service
 make platform-infra-up   # Postgres :5437 + Kafka
 make platform-run        # starts notification on :8086 before gateway
 make platform-verify     # checks http://localhost:8086/actuator/health
+make e2e                 # full flow including notifications (5.6.1 / 5.6.2)
 ```
+
+E2E notification checks (via gateway): SSE `connected`, inbox contains payment + delivery alert types for the order, mark-read succeeds. Tune waits with `E2E_NOTIFICATION_WAIT=25` if Kafka is cold.
 
 ## Makefile commands
 
@@ -157,5 +162,5 @@ Payment events register `order_id → customer_id` in `order_recipients` so late
 | 2 | Kafka consumers + persistence |
 | 3 | SSE streams (5.6.1) |
 | 4 | Gateway routes + platform scripts |
-| 5 | Inbox + alerts (5.6.2) — this phase |
-| 6 | Tests + E2E extension |
+| 5 | Inbox + alerts (5.6.2) |
+| 6 | E2E extension — this phase |

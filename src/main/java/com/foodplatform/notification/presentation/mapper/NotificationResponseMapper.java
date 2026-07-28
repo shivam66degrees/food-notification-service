@@ -20,6 +20,7 @@ public final class NotificationResponseMapper {
     public static NotificationItemResponse toItemResponse(NotificationInboxService.NotificationItem item) {
         return new NotificationItemResponse(
                 item.id(),
+                item.orderId(),
                 item.eventType(),
                 item.title(),
                 item.body(),

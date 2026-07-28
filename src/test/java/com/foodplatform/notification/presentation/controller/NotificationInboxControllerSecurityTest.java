@@ -46,6 +46,7 @@ class NotificationInboxControllerSecurityTest {
         UUID notificationId = UUID.randomUUID();
         var item = new NotificationInboxService.NotificationItem(
                 notificationId,
+                UUID.randomUUID(),
                 "PaymentConfirmed",
                 "Payment confirmed",
                 "Your payment was confirmed.",

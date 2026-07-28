@@ -56,6 +56,7 @@ public class NotificationInboxService {
     static NotificationItem toItem(NotificationJpaEntity entity) {
         return new NotificationItem(
                 entity.getId(),
+                entity.getOrderId(),
                 entity.getEventType(),
                 entity.getTitle(),
                 entity.getBody(),
@@ -66,6 +67,7 @@ public class NotificationInboxService {
 
     public record NotificationItem(
             UUID id,
+            UUID orderId,
             String eventType,
             String title,
             String body,

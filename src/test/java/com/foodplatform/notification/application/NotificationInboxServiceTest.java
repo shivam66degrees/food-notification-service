@@ -99,6 +99,7 @@ class NotificationInboxServiceTest {
         NotificationJpaEntity entity = new NotificationJpaEntity();
         entity.setId(UUID.randomUUID());
         entity.setRecipientUserId(userId);
+        entity.setOrderId(UUID.randomUUID());
         entity.setEventType("PaymentConfirmed");
         entity.setTitle(title);
         entity.setBody("Body");
