@@ -1,0 +1,115 @@
+openapi: 3.0.3
+info:
+  title: Food Delivery Platform - Notification Service
+  description: |
+    Notification bounded context — real-time SSE streams and inbox (requirements 5.6.1 / 5.6.2).
+    Phase 1 scaffold: health and contract stubs; endpoints implemented in later phases.
+  version: 1.0.0
+servers:
+  - url: http://localhost:8086
+    description: Local Development Server
+
+paths:
+  /actuator/health:
+    get:
+      tags: [Operations]
+      summary: Service health check
+      operationId: getHealth
+      responses:
+        '200':
+          description: Service is healthy
+
+  /notifications/stream:
+    get:
+      tags: [Notifications]
+      summary: Server-sent events stream for live updates (Phase 3)
+      operationId: streamNotifications
+      parameters:
+        - name: X-User-Id
+          in: header
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: SSE stream opened
+          content:
+            text/event-stream:
+              schema:
+                type: string
+        '401':
+          description: Missing or invalid gateway identity headers
+
+  /notifications/inbox:
+    get:
+      tags: [Notifications]
+      summary: Paginated notification inbox (Phase 5)
+      operationId: listInbox
+      parameters:
+        - name: X-User-Id
+          in: header
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+        - name: size
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: Inbox page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InboxPage'
+        '401':
+          description: Missing or invalid gateway identity headers
+
+components:
+  schemas:
+    NotificationItem:
+      type: object
+      required: [id, eventType, title, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        eventType:
+          type: string
+        title:
+          type: string
+        body:
+          type: string
+        readAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+
+    InboxPage:
+      type: object
+      required: [items, page, size, totalElements]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/NotificationItem'
+        page:
+          type: integer
+        size:
+          type: integer
+        totalElements:
+          type: integer

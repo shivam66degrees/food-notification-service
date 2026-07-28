@@ -1,0 +1,15 @@
+services:
+  notification-db:
+    image: postgres:16-alpine
+    container_name: food_notification_db_container
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    ports:
+      - "${DB_PORT}:5432"
+    volumes:
+      - notification_db_data:/var/lib/postgresql/data
+
+volumes:
+  notification_db_data:
