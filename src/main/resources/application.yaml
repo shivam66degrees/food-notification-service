@@ -22,6 +22,19 @@ spring:
     enabled: true
     baseline-on-migrate: true
 
+  kafka:
+    bootstrap-servers: localhost:9092
+    consumer:
+      group-id: food-notification-service
+      auto-offset-reset: earliest
+
+notification:
+  kafka:
+    topics:
+      payment-events: payment.events
+      order-events: order.events
+      delivery-events: delivery.events
+
 management:
   endpoints:
     web:
