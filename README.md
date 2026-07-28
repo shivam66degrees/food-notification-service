@@ -12,6 +12,8 @@ Consumes order, payment, and delivery events; pushes updates to clients via SSE 
 
 **Phase 4** — Gateway route `/notifications/**` → `:8086`; included in platform `build-all`, `run-all`, `verify-all`, `infra-up`.
 
+**Phase 5** — Inbox API (`GET /notifications/inbox`) and mark-read (`PATCH /notifications/{id}/read`) for delivery/status alerts (5.6.2).
+
 ## Software requirements
 
 | Software | Purpose |
@@ -62,6 +64,28 @@ make dev
 | Swagger UI | http://localhost:8086/swagger-ui/index.html |
 | OpenAPI contract | `api-spec/notification-spec.yaml` |
 | SSE stream | `GET /notifications/stream` (requires `X-User-Id` from gateway) |
+| Inbox | `GET /notifications/inbox` |
+| Mark read | `PATCH /notifications/{id}/read` |
+
+### Inbox (via gateway)
+
+```bash
+TOKEN=$(curl -s -X POST http://localhost:8090/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"e2e.customer@example.com","password":"E2ePass123!"}' \
+  | python3 -c "import sys,json; print(json.load(sys.stdin)['accessToken'])")
+
+curl -s "http://localhost:8090/notifications/inbox?page=0&size=20" \
+  -H "Authorization: Bearer $TOKEN" | python3 -m json.tool
+
+# Unread alerts only
+curl -s "http://localhost:8090/notifications/inbox?unreadOnly=true" \
+  -H "Authorization: Bearer $TOKEN" | python3 -m json.tool
+
+# Mark as read
+curl -s -X PATCH "http://localhost:8090/notifications/<notification-id>/read" \
+  -H "Authorization: Bearer $TOKEN" | python3 -m json.tool
+```
 
 ### SSE stream (via gateway)
 
@@ -132,6 +156,6 @@ Payment events register `order_id → customer_id` in `order_recipients` so late
 | 1 | Scaffold |
 | 2 | Kafka consumers + persistence |
 | 3 | SSE streams (5.6.1) |
-| 4 | Gateway routes + platform scripts — this phase |
-| 5 | Inbox + alerts (5.6.2) |
+| 4 | Gateway routes + platform scripts |
+| 5 | Inbox + alerts (5.6.2) — this phase |
 | 6 | Tests + E2E extension |

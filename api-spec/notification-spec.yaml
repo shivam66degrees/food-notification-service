@@ -3,7 +3,6 @@ info:
   title: Food Delivery Platform - Notification Service
   description: |
     Notification bounded context — real-time SSE streams and inbox (requirements 5.6.1 / 5.6.2).
-    SSE stream implemented at `/notifications/stream`; inbox in Phase 5.
   version: 1.0.0
 servers:
   - url: http://localhost:8086
@@ -49,7 +48,7 @@ paths:
   /notifications/inbox:
     get:
       tags: [Notifications]
-      summary: Paginated notification inbox (Phase 5)
+      summary: Paginated notification inbox for the authenticated user
       operationId: listInbox
       parameters:
         - name: X-User-Id
@@ -71,6 +70,11 @@ paths:
             minimum: 1
             maximum: 100
             default: 20
+        - name: unreadOnly
+          in: query
+          schema:
+            type: boolean
+            default: false
       responses:
         '200':
           description: Inbox page
@@ -80,6 +84,36 @@ paths:
                 $ref: '#/components/schemas/InboxPage'
         '401':
           description: Missing or invalid gateway identity headers
+
+  /notifications/{notificationId}/read:
+    patch:
+      tags: [Notifications]
+      summary: Mark a notification as read
+      operationId: markNotificationRead
+      parameters:
+        - name: X-User-Id
+          in: header
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: notificationId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Updated notification
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationItem'
+        '401':
+          description: Missing or invalid gateway identity headers
+        '404':
+          description: Notification not found or not owned by caller
 
 components:
   schemas:
