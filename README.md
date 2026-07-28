@@ -2,6 +2,18 @@
 
 Notification bounded context for the Food Delivery Platform.
 
+## Documentation
+
+| Document | Description |
+|----------|-------------|
+| [docs/TDD.md](docs/TDD.md) | Technical Design Document |
+| [docs/API.md](docs/API.md) | API endpoint index (3 operations) |
+| [docs/endpoints/](docs/endpoints/) | Detailed endpoint reference |
+| [api-spec/notification-spec.yaml](api-spec/notification-spec.yaml) | OpenAPI contract |
+
+Platform-wide: [docs/ARCHITECTURE.md](../docs/ARCHITECTURE.md), [docs/SECURITY.md](../docs/SECURITY.md).  
+Gateway routes: [ROUTE-notification](../food-api-gateway/docs/endpoints/ROUTE-notification.md).
+
 Consumes order, payment, and delivery events; pushes updates to clients via SSE and maintains an inbox (requirements 5.6.1 / 5.6.2).
 
 **Phase 1** — Spring Boot scaffold, Postgres, Flyway baseline, actuator health, OpenAPI contract stub.
