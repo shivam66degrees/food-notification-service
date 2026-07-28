@@ -10,6 +10,8 @@ Consumes order, payment, and delivery events; pushes updates to clients via SSE 
 
 **Phase 3** — SSE stream at `GET /notifications/stream` (5.6.1); gateway header auth; live push when Kafka events are persisted.
 
+**Phase 4** — Gateway route `/notifications/**` → `:8086`; included in platform `build-all`, `run-all`, `verify-all`, `infra-up`.
+
 ## Software requirements
 
 | Software | Purpose |
@@ -61,7 +63,20 @@ make dev
 | OpenAPI contract | `api-spec/notification-spec.yaml` |
 | SSE stream | `GET /notifications/stream` (requires `X-User-Id` from gateway) |
 
-### SSE stream (local dev)
+### SSE stream (via gateway)
+
+```bash
+TOKEN=$(curl -s -X POST http://localhost:8090/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"e2e.customer@example.com","password":"E2ePass123!"}' \
+  | python3 -c "import sys,json; print(json.load(sys.stdin)['accessToken'])")
+
+curl -N http://localhost:8090/notifications/stream \
+  -H "Accept: text/event-stream" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+Direct service port (local debugging only):
 
 ```bash
 curl -N http://localhost:8086/notifications/stream \
@@ -71,6 +86,17 @@ curl -N http://localhost:8086/notifications/stream \
 ```
 
 Events: `connected` on subscribe, then `notification` with JSON payload when Kafka events are processed.
+
+## Platform integration
+
+From the platform root:
+
+```bash
+make platform-build      # includes food-notification-service
+make platform-infra-up   # Postgres :5437 + Kafka
+make platform-run        # starts notification on :8086 before gateway
+make platform-verify     # checks http://localhost:8086/actuator/health
+```
 
 ## Makefile commands
 
@@ -105,7 +131,7 @@ Payment events register `order_id → customer_id` in `order_recipients` so late
 |-------|--------|
 | 1 | Scaffold |
 | 2 | Kafka consumers + persistence |
-| 3 | SSE streams (5.6.1) — this phase |
-| 4 | Gateway routes + platform scripts |
+| 3 | SSE streams (5.6.1) |
+| 4 | Gateway routes + platform scripts — this phase |
 | 5 | Inbox + alerts (5.6.2) |
 | 6 | Tests + E2E extension |
