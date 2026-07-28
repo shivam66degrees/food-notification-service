@@ -48,4 +48,38 @@ class NotificationStreamServiceTest {
         assertThat(payload.body()).isEqualTo("Enjoy!");
         assertThat(payload.createdAt()).isEqualTo(createdAt);
     }
+
+    @Test
+    void subscribe_returnsEmitter() {
+        NotificationStreamService service = new NotificationStreamService(60_000L);
+        UUID userId = UUID.randomUUID();
+
+        assertThat(service.subscribe(userId)).isNotNull();
+    }
+
+    @Test
+    void publish_withSubscriber_deliversPayload() {
+        NotificationStreamService service = new NotificationStreamService(60_000L);
+        UUID recipientId = UUID.randomUUID();
+        service.subscribe(recipientId);
+
+        NotificationStreamPayload payload = new NotificationStreamPayload(
+                UUID.randomUUID(),
+                UUID.randomUUID(),
+                "PaymentConfirmed",
+                "Payment confirmed",
+                "Body",
+                Instant.now()
+        );
+
+        service.publish(recipientId, payload);
+    }
+
+    @Test
+    void sendHeartbeats_withSubscriber_doesNotThrow() {
+        NotificationStreamService service = new NotificationStreamService(60_000L);
+        service.subscribe(UUID.randomUUID());
+
+        service.sendHeartbeats();
+    }
 }

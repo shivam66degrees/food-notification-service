@@ -179,4 +179,161 @@ class NotificationApplicationServiceTest {
         assertThat(captor.getValue().getEventType()).isEqualTo(OrderEventTypes.ORDER_READY_FOR_DELIVERY);
         verify(notificationStreamService).publish(eq(customerId), any(NotificationStreamPayload.class));
     }
+
+    @Test
+    void handlePaymentFailed_persistsFailedNotification() {
+        UUID orderId = UUID.randomUUID();
+        UUID customerId = UUID.randomUUID();
+        UUID eventId = UUID.randomUUID();
+        PaymentEvent event = new PaymentEvent(
+                eventId,
+                PaymentEventTypes.PAYMENT_FAILED,
+                Instant.now(),
+                UUID.randomUUID(),
+                orderId,
+                customerId,
+                new BigDecimal("10.00"),
+                "INR",
+                "Card declined"
+        );
+
+        when(notificationRepository.existsBySourceEventId(eventId)).thenReturn(false);
+        when(orderRecipientRepository.findByOrderId(orderId)).thenReturn(Optional.empty());
+        when(notificationRepository.save(any(NotificationJpaEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        notificationApplicationService.handlePaymentEvent(event);
+
+        ArgumentCaptor<NotificationJpaEntity> captor = ArgumentCaptor.forClass(NotificationJpaEntity.class);
+        verify(notificationRepository).save(captor.capture());
+        assertThat(captor.getValue().getTitle()).isEqualTo("Payment failed");
+        assertThat(captor.getValue().getBody()).isEqualTo("Card declined");
+    }
+
+    @Test
+    void handlePaymentEvent_ignoresIncompleteEvent() {
+        PaymentEvent event = new PaymentEvent(
+                UUID.randomUUID(),
+                PaymentEventTypes.PAYMENT_CONFIRMED,
+                Instant.now(),
+                UUID.randomUUID(),
+                null,
+                UUID.randomUUID(),
+                new BigDecimal("10.00"),
+                "INR",
+                null
+        );
+
+        notificationApplicationService.handlePaymentEvent(event);
+
+        verify(notificationRepository, never()).save(any());
+    }
+
+    @Test
+    void handlePaymentEvent_ignoresUnknownEventType() {
+        PaymentEvent event = new PaymentEvent(
+                UUID.randomUUID(),
+                "UnknownPaymentEvent",
+                Instant.now(),
+                UUID.randomUUID(),
+                UUID.randomUUID(),
+                UUID.randomUUID(),
+                new BigDecimal("10.00"),
+                "INR",
+                null
+        );
+
+        notificationApplicationService.handlePaymentEvent(event);
+
+        verify(notificationRepository, never()).save(any());
+    }
+
+    @Test
+    void handlePaymentConfirmed_skipsExistingOrderRecipient() {
+        UUID orderId = UUID.randomUUID();
+        UUID customerId = UUID.randomUUID();
+        UUID eventId = UUID.randomUUID();
+        PaymentEvent event = new PaymentEvent(
+                eventId,
+                PaymentEventTypes.PAYMENT_CONFIRMED,
+                Instant.now(),
+                UUID.randomUUID(),
+                orderId,
+                customerId,
+                new BigDecimal("12.99"),
+                "INR",
+                null
+        );
+
+        OrderRecipientJpaEntity existing = new OrderRecipientJpaEntity();
+        existing.setOrderId(orderId);
+        existing.setCustomerId(customerId);
+
+        when(notificationRepository.existsBySourceEventId(eventId)).thenReturn(false);
+        when(orderRecipientRepository.findByOrderId(orderId)).thenReturn(Optional.of(existing));
+        when(notificationRepository.save(any(NotificationJpaEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        notificationApplicationService.handlePaymentEvent(event);
+
+        verify(orderRecipientRepository, never()).save(any());
+        verify(notificationRepository).save(any(NotificationJpaEntity.class));
+    }
+
+    @Test
+    void handleOrderEvent_ignoresUnsupportedType() {
+        OrderEvent event = new OrderEvent(
+                UUID.randomUUID(),
+                "OrderCreated",
+                Instant.now(),
+                UUID.randomUUID()
+        );
+
+        notificationApplicationService.handleOrderEvent(event);
+
+        verify(notificationRepository, never()).save(any());
+    }
+
+    @Test
+    void handleOrderEvent_ignoresIncompleteEvent() {
+        OrderEvent event = new OrderEvent(
+                UUID.randomUUID(),
+                OrderEventTypes.ORDER_READY_FOR_DELIVERY,
+                Instant.now(),
+                null
+        );
+
+        notificationApplicationService.handleOrderEvent(event);
+
+        verify(notificationRepository, never()).save(any());
+    }
+
+    @Test
+    void handleDeliveryEvent_skipsDuplicateSourceEvent() {
+        UUID eventId = UUID.randomUUID();
+        DeliveryEvent event = new DeliveryEvent(
+                eventId,
+                DeliveryEventTypes.DELIVERY_DELIVERED,
+                Instant.now(),
+                UUID.randomUUID()
+        );
+
+        when(notificationRepository.existsBySourceEventId(eventId)).thenReturn(true);
+
+        notificationApplicationService.handleDeliveryEvent(event);
+
+        verify(notificationRepository, never()).save(any());
+    }
+
+    @Test
+    void handleDeliveryEvent_ignoresIncompleteEvent() {
+        DeliveryEvent event = new DeliveryEvent(
+                UUID.randomUUID(),
+                DeliveryEventTypes.DELIVERY_DELIVERED,
+                Instant.now(),
+                null
+        );
+
+        notificationApplicationService.handleDeliveryEvent(event);
+
+        verify(notificationRepository, never()).save(any());
+    }
 }

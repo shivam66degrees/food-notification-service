@@ -95,6 +95,37 @@ class NotificationInboxServiceTest {
                 .isInstanceOf(NotificationNotFoundException.class);
     }
 
+    @Test
+    void markAsRead_whenAlreadyRead_doesNotSaveAgain() {
+        UUID userId = UUID.randomUUID();
+        UUID notificationId = UUID.randomUUID();
+        NotificationJpaEntity entity = sampleEntity(userId, "Delivered");
+        entity.setId(notificationId);
+        entity.setReadAt(Instant.parse("2026-07-28T01:00:00Z"));
+
+        when(notificationRepository.findByIdAndRecipientUserId(notificationId, userId))
+                .thenReturn(Optional.of(entity));
+
+        NotificationInboxService.NotificationItem item =
+                notificationInboxService.markAsRead(userId, notificationId);
+
+        verify(notificationRepository, never()).save(any());
+        assertThat(item.readAt()).isEqualTo(entity.getReadAt());
+    }
+
+    @Test
+    void listInbox_clampsPageAndSize() {
+        UUID userId = UUID.randomUUID();
+        Page<NotificationJpaEntity> emptyPage = new PageImpl<>(List.of(), Pageable.ofSize(100), 0);
+
+        when(notificationRepository.findByRecipientUserId(eq(userId), any(Pageable.class))).thenReturn(emptyPage);
+
+        NotificationInboxService.InboxPage inbox = notificationInboxService.listInbox(userId, -1, 500, false);
+
+        assertThat(inbox.page()).isZero();
+        assertThat(inbox.size()).isEqualTo(100);
+    }
+
     private static NotificationJpaEntity sampleEntity(UUID userId, String title) {
         NotificationJpaEntity entity = new NotificationJpaEntity();
         entity.setId(UUID.randomUUID());
