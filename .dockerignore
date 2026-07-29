@@ -1,0 +1,13 @@
+target/
+.git/
+.gitignore
+.idea/
+*.iml
+infra/
+logs/
+.env
+.env.*
+*.md
+docs/
+api-spec/
+Makefile
