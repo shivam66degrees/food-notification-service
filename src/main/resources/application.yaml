@@ -1,14 +1,14 @@
 server:
-  port: 8086
+  port: ${SERVER_PORT:8086}
 
 spring:
   application:
     name: food-notification-service
 
   datasource:
-    url: jdbc:postgresql://localhost:5437/food_notification_db
-    username: notification_admin
-    password: notification_secure_pass_2026
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5437/food_notification_db}
+    username: ${SPRING_DATASOURCE_USERNAME:notification_admin}
+    password: ${SPRING_DATASOURCE_PASSWORD:notification_secure_pass_2026}
     driver-class-name: org.postgresql.Driver
 
   jpa:
@@ -23,7 +23,7 @@ spring:
     baseline-on-migrate: true
 
   kafka:
-    bootstrap-servers: localhost:9092
+    bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
     consumer:
       group-id: food-notification-service
       auto-offset-reset: earliest
