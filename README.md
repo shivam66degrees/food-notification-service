@@ -16,18 +16,6 @@ Gateway routes: [ROUTE-notification](../food-api-gateway/docs/endpoints/ROUTE-no
 
 Consumes order, payment, and delivery events; pushes updates to clients via SSE and maintains an inbox (requirements 5.6.1 / 5.6.2).
 
-**Phase 1** — Spring Boot scaffold, Postgres, Flyway baseline, actuator health, OpenAPI contract stub.
-
-**Phase 2** — Kafka consumers for `payment.events`, `order.events`, and `delivery.events`; persist notifications and `order_recipients` mapping (from payment events) for downstream delivery/order alerts.
-
-**Phase 3** — SSE stream at `GET /notifications/stream` (5.6.1); gateway header auth; live push when Kafka events are persisted.
-
-**Phase 4** — Gateway route `/notifications/**` → `:8086`; included in platform `build-all`, `run-all`, `verify-all`, `infra-up`.
-
-**Phase 5** — Inbox API (`GET /notifications/inbox`) and mark-read (`PATCH /notifications/{id}/read`) for delivery/status alerts (5.6.2).
-
-**Phase 6** — Platform E2E extended: SSE connected event, inbox alerts for full order flow, mark-read.
-
 ## Software requirements
 
 | Software | Purpose |
@@ -74,12 +62,33 @@ make dev
 
 | Resource | URL |
 |----------|-----|
+| API (direct) | http://localhost:8086 |
 | Health | http://localhost:8086/actuator/health |
-| Swagger UI | http://localhost:8086/swagger-ui/index.html |
+| Swagger UI (direct, debugging) | http://localhost:8086/swagger-ui/index.html |
 | OpenAPI contract | `api-spec/notification-spec.yaml` |
-| SSE stream | `GET /notifications/stream` (requires `X-User-Id` from gateway) |
+| OpenAPI JSON (direct) | http://localhost:8086/v3/api-docs |
+| SSE stream | `GET /notifications/stream` (requires JWT via gateway) |
 | Inbox | `GET /notifications/inbox` |
 | Mark read | `PATCH /notifications/{id}/read` |
+
+### Platform Swagger via gateway (recommended)
+
+| Environment | Swagger UI |
+|-------------|------------|
+| Local (`make platform-dev`) | **http://localhost:8090/swagger-ui.html** |
+| Kubernetes (ingress) | **http://localhost/swagger-ui.html** |
+
+Notification inbox and stream endpoints are in the unified UI under **Notifications**. Use **Authorize** with a customer JWT.
+
+Per-service OpenAPI via gateway: http://localhost:8090/openapi/notification/v3/api-docs
+
+## Docker & Kubernetes
+
+| Resource | Location |
+|----------|----------|
+| Container image | `Dockerfile` in this repo |
+| CI | `.github/workflows/ci.yml` — `mvn verify` + GHCR image push on `master` |
+| Full platform deploy | [food-platform-deploy](../food-platform-deploy/README.md) |
 
 ### Inbox (via gateway)
 
@@ -133,9 +142,11 @@ From the platform root:
 make platform-build      # includes food-notification-service
 make platform-infra-up   # Postgres :5437 + Kafka
 make platform-run        # starts notification on :8086 before gateway
-make platform-verify     # checks http://localhost:8086/actuator/health
+make platform-verify     # checks actuator health on all services
 make e2e                 # full flow including notifications (5.6.1 / 5.6.2)
 ```
+
+E2E via Kubernetes ingress: `GATEWAY_URL=http://localhost E2E_SKIP_VERIFY=true make e2e`
 
 E2E notification checks (via gateway): SSE `connected`, inbox contains payment + delivery alert types for the order, mark-read succeeds. Tune waits with `E2E_NOTIFICATION_WAIT=25` if Kafka is cold.
 
@@ -165,14 +176,3 @@ mvn clean verify
 | `delivery.events` | `DeliveryAssigned`, `DeliveryPickedUp`, `DeliveryInTransit`, `DeliveryDelivered` |
 
 Payment events register `order_id → customer_id` in `order_recipients` so later order/delivery events can target the right inbox recipient.
-
-## Roadmap
-
-| Phase | Scope |
-|-------|--------|
-| 1 | Scaffold |
-| 2 | Kafka consumers + persistence |
-| 3 | SSE streams (5.6.1) |
-| 4 | Gateway routes + platform scripts |
-| 5 | Inbox + alerts (5.6.2) |
-| 6 | E2E extension — this phase |
